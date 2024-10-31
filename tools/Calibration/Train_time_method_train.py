@@ -7,7 +7,7 @@ sys.path.insert(0,parentdir)
 from customKing.utils.env import Set_seed
 from customKing.config.config import get_cfg
 from customKing.modeling.meta_arch.build import build_model, build_metric
-from datasets.public_logits_datasets.unpickle_probs import unpickle_probs
+from customKing.data.datasets.Public_logits_data.unpickle_probs import unpickle_probs
 
 import logging
 from customKing.solver.build import build_optimizer,build_lr_scheduler

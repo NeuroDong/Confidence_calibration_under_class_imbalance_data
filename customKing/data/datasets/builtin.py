@@ -35,7 +35,11 @@ from .Image_classification.Uniform_noise import register_Uniform_Noise
 from .Image_classification.Sphere_OOD import register_Sphere_OOD
 from .Image_classification.PACS import register_PACS
 
+from .Imbalance_data.Multi_classification.Cifar10_LT import register_Cifar10_LT
+from .Imbalance_data.Binary_classification.Pami import register_Pami
 
+
+#----------------balance data----------------------#
 def register_all_Cifar10(root):
     names = ["Cifar10_train","Cifar10_valid","Cifar10_train_and_valid","Cifar10_test",
             "Cifar10_train_and_valid_and_test","Cifar10_train_aug","Cifar10_valid_aug","Cifar10_train_and_valid_aug",
@@ -106,10 +110,23 @@ def register_all_PACS(root):
     for name in names:
         register_PACS(name,root)
 
+#----------------imbalance data----------------------#
+def register_all_Cifar10_LT(root):
+    names = ["Cifar10_train_LT","Cifar10_valid_LT","Cifar10_train_and_valid_LT", "Cifar10_train_aug_LT","Cifar10_valid_aug_LT","Cifar10_train_and_valid_aug_LT"]
+    for name in names:
+        register_Cifar10_LT(name,root)
+
+def register_all_Pami(root):
+    names = ["Pami_train","Pami_valid","Pami_train_and_valid","Pami_test"]
+    for name in names:
+        register_Pami(name,root)
+
+
 if __name__.endswith(".builtin"):
     # Assume pre-defined datasets live in `./datasets`.
     _root = os.path.expanduser(os.getenv("CUSTOM_KING_DATASETS", "datasets"))
     #_root = "datasets"
+
     register_all_Cifar10(_root)
     register_all_Cifar100(_root)
     register_all_SVHN(_root)
@@ -123,3 +140,7 @@ if __name__.endswith(".builtin"):
     register_all_Uniform_Noise()
     register_all_Sphere_OOD(_root)
     register_all_PACS(_root)
+
+    #----------------imbalance data----------------------#
+    register_all_Cifar10_LT(_root)
+    register_all_Pami(_root)

@@ -22,7 +22,7 @@ _C.SEED = 20
 task_mode = "In-Train Calibration"
 _C.MODEL = CN()
 _C.MODEL.META_ARCHITECTURE = "Wide_resnet34_2_DualFocalLoss"
-_C.MODEL.NUM_ClASSES = 100
+_C.MODEL.NUM_ClASSES = 2
 _C.MODEL.DEVICE = "cuda:0"
 _C.MODEL.JUST_EVAL = False
 _C.MODEL.PRE_WEIGHT = False
@@ -52,10 +52,9 @@ _C.SOLVER.NUM_WORKERS = 8    #the num workers of the Dataloader
 _C.SOLVER.IS_PARALLEL = False   #Whether to use multiple GPUs for training
 
 _C.DATASETS = CN()
-_C.DATASETS.TRAIN = "Cifar100_train"    #train dataset
-_C.DATASETS.VALID = "Cifar100_valid"    #valid dataset
-_C.DATASETS.TEST = "Cifar100_test"      #test dataset
-
+_C.DATASETS.TRAIN = "Pami_train"    #train dataset
+_C.DATASETS.VALID = "Pami_valid"    #valid dataset
+_C.DATASETS.TEST = "Pami_test"      #test dataset
 
 _C.EVALUATE = CN()
 _C.EVALUATE.METHOD_list = ["ECE_with_equal_mass", "Debaised_ECE", "ECE_sweep_em", "KS_error", "SmoothingECE"]  #"TCE_BPM"
