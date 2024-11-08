@@ -21,7 +21,7 @@ _C.SEED = 20
 # ---------------------------------------------------------------------------- #
 task_mode = "Post-hoc Calibration"
 _C.MODEL = CN()
-_C.MODEL.META_ARCHITECTURE = "temperature_scale_with_ece"
+_C.MODEL.META_ARCHITECTURE = "mix_n_match"
 _C.MODEL.NUM_CLASS = 100
 _C.MODEL.DEVICE = "cuda:0"
 _C.MODEL.JUST_EVAL = False
