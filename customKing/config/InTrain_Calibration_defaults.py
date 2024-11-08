@@ -52,9 +52,9 @@ _C.SOLVER.NUM_WORKERS = 8    #the num workers of the Dataloader
 _C.SOLVER.IS_PARALLEL = False   #Whether to use multiple GPUs for training
 
 _C.DATASETS = CN()
-_C.DATASETS.TRAIN = "Pami_train"    #train dataset
-_C.DATASETS.VALID = "Pami_valid"    #valid dataset
-_C.DATASETS.TEST = "Pami_test"      #test dataset
+_C.DATASETS.TRAIN = "Survival_train"    #train dataset
+_C.DATASETS.VALID = "Survival_valid"    #valid dataset
+_C.DATASETS.TEST = "Survival_test"      #test dataset
 
 _C.EVALUATE = CN()
 _C.EVALUATE.METHOD_list = ["ECE_with_equal_mass", "Debaised_ECE", "ECE_sweep_em", "KS_error", "SmoothingECE"]  #"TCE_BPM"

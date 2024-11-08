@@ -37,6 +37,8 @@ from .Image_classification.PACS import register_PACS
 
 from .Imbalance_data.Multi_classification.Cifar10_LT import register_Cifar10_LT
 from .Imbalance_data.Binary_classification.Pami import register_Pami
+from .Imbalance_data.Binary_classification.GermanCredit import register_Credit
+from .Imbalance_data.Binary_classification.Habermansurvival import register_Survival
 
 
 #----------------balance data----------------------#
@@ -121,6 +123,15 @@ def register_all_Pami(root):
     for name in names:
         register_Pami(name,root)
 
+def register_all_Credit(root):
+    names = ["Credit_train","Credit_valid","Credit_train_and_valid","Credit_test"]
+    for name in names:
+        register_Credit(name,root)
+
+def register_all_Survival(root):
+    names = ["Survival_train","Survival_valid","Survival_train_and_valid","Survival_test"]
+    for name in names:
+        register_Survival(name,root)
 
 if __name__.endswith(".builtin"):
     # Assume pre-defined datasets live in `./datasets`.
@@ -144,3 +155,6 @@ if __name__.endswith(".builtin"):
     #----------------imbalance data----------------------#
     register_all_Cifar10_LT(_root)
     register_all_Pami(_root)
+    register_all_Credit(_root)
+    register_all_Survival(_root)
+    
