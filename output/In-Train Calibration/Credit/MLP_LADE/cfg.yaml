@@ -1,0 +1,38 @@
+DATASETS:
+  INPUTE_SIZE: (24,)
+  TEST: Credit_test
+  TRAIN: Credit_train
+  VALID: Credit_valid
+EVALUATE:
+  METHOD_list: ['ECE_with_equal_mass', 'ICE_smooth', 'ICE_soft', 'ICE_strong', 'CECE', 'MSECE', 'WSECE', 'RBECE']
+MODEL:
+  DEVICE: cuda:0
+  JUST_EVAL: False
+  META_ARCHITECTURE: MLP_LADE
+  NUM_CLASS: 2
+  OUTPUT_DIR: output/In-Train Calibration/Credit/MLP_LADE/
+  PREWEIGHT: 
+  PRE_WEIGHT: False
+SEED: 20
+SOLVER:
+  BASE_LR: 0.1
+  BATCH_SIZE: 128
+  BETA: (0.9, 0.999)
+  CLR_STEPS: 2000
+  GAMMA: 0.1
+  IS_PARALLEL: False
+  LR_SCHEDULER_NAME: Step_Decay
+  MAX_EPOCH: 20
+  MAX_ITER: 64000
+  MOMENTUM: 0.9
+  NESTEROV: False
+  NUM_WORKERS: 8
+  NUM_WORKS: 20
+  OPTIMIZER: SGD
+  SHUFFLE: True
+  START_ITER: 0
+  STEPS: (32000, 48000)
+  WARMUP_FACTOR: 0.001
+  WARMUP_ITERS: 1000
+  WARMUP_METHOD: linear
+  WEIGHT_DECAY: 0.0005

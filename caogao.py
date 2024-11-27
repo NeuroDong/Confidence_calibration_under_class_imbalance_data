@@ -1,31 +1,13 @@
-import kagglehub
-import csv
-import os
+from sklearn.preprocessing import OneHotEncoder
+import numpy as np
 
-# Download latest version
-path = kagglehub.dataset_download("uciml/pima-indians-diabetes-database")
+# 假设你有一个numpy数组，包含你的标签数据
+labels = np.array([0, 1, 2, 0, 1, 2])
 
-print("Path to dataset files:", path)
+# 创建OneHotEncoder实例
+encoder = OneHotEncoder(sparse=False)  # sparse=False意味着输出一个numpy数组，而不是稀疏矩阵
 
-csv_file_path = os.path.join(path, "diabetes.csv")
+# 将标签数据转换为one-hot编码
+one_hot_labels = encoder.fit_transform(labels.reshape(-1, 1))  # reshape是必要的，因为OneHotEncoder期望2D输入
 
-x_list = []
-y_list = []
-with open(csv_file_path, 'r') as csvfile:
-    # 创建CSV读取器
-    csvreader = csv.reader(csvfile)
-
-    # 读取标题行
-    header = next(csvreader)
-
-    # 遍历CSV文件中的每一行
-    for row in csvreader:
-        x = []
-        for i in range(len(row[:-1])):
-            x.append(float(row[i]))
-        x_list.append(x)
-        y_list.append(float(row[-1]))            
-
-print(x_list)
-print(y_list)
-
+print(one_hot_labels)

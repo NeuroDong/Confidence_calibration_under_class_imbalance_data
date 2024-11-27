@@ -4,7 +4,9 @@
 from turtle import forward
 from .build import META_ARCH_REGISTRY, build_model  # isort:skip
 
-#Image classffication
+
+# Classification task
+#Image classification
 from .Image_classification.Resnext import Resnet20,Resnet110,Resnet18,Resnet34,Resnet50,Resnet101,Resnet152,ResNeXt29_8x64d,ResNeXt29_16x64d,ResNeXt50,ResNeXt101,Wide_resnet34_2,Wide_resnet50_2,Wide_resnet101_2
 from .Image_classification.Wide_Resnet import Wide_ResNet28_10,Wide_ResNet34_2
 from .Image_classification.ResNet_SD import resnet50_StoDepth_lineardecay,resnet34_StoDepth_lineardecay,resnet18_StoDepth_lineardecay,resnet101_StoDepth_lineardecay,resnet152_StoDepth_lineardecay
@@ -14,10 +16,16 @@ from .Image_classification.CoAtNets import coatnet_0,coatnet_1,coatnet_2,coatnet
 from .Image_classification.VisionTransformer import Vit_small,Vit_b_16,Vit_l_32,Vit_b_32,Vit_l_16
 from .Image_classification.SwinTransformer import swin_b,swin_l,swin_s,swin_t
 from .Image_classification.PNASNet5 import PNASNet5
+#1D classification
+from .oneD_classification.MLPClassfier import MLPClassifier
 
 #General Calibration
 #Calibration metrics
-from .Calibration_metrics.naive_ECE import ECE_with_equal_mass,ECE_with_equal_width
+from .Calibration_metrics.General_metrics.naive_ECE import ECE_with_equal_mass,ECE_with_equal_width
+from .Calibration_metrics.General_metrics.KS_error import KS_error
+from .Calibration_metrics.General_metrics.Debaised_ECE import Debaised_ECE
+from .Calibration_metrics.General_metrics.ECE_sweep import ECE_sweep_em
+from .Calibration_metrics.General_metrics.Smoothing_ECE import SmoothingECE
 #post-hoc
 from .Confidence_calibration.Post_hoc_methods.General_Methods.Temperature_scale import temperature_scale_cross_entropy,temperature_scale_with_ece
 from .Confidence_calibration.Post_hoc_methods.General_Methods.IsotonicRegression import isotonicRegression
@@ -35,11 +43,27 @@ from .Confidence_calibration.In_training_methods.General_methods.Dual_Focal_Loss
 
 # Calibration under class imbalance data
 #Calibration metrics
-pass
+from .Calibration_metrics.Imbalance_metrics.ICE import ICE_strong,ICE_soft,ICE_smooth
+from .Calibration_metrics.Imbalance_metrics.Class_wise_ECE import CECE,MSECE,WSECE
+from .Calibration_metrics.Imbalance_metrics.RBECE import RBECE
+# Data level calibration method
+from .Confidence_calibration.Data_level_methods.For_imbalance_data.AUB_platt import AUB_Platt
+from .Confidence_calibration.Data_level_methods.For_imbalance_data.UniMix import unimix,Bayias_compensated_loss
+
 #post-hoc
-pass
+from .Confidence_calibration.Post_hoc_methods.For_imbalance_data.TKHT import TKHT_2Head
+from .Confidence_calibration.Post_hoc_methods.For_imbalance_data.CLS import CLS
+from .Confidence_calibration.Post_hoc_methods.For_imbalance_data import RCIR
+from .Confidence_calibration.Post_hoc_methods.For_imbalance_data import I_Max_sCW
+
 #In-train
-pass
+from .Confidence_calibration.In_training_methods.For_imbalance_data.TLC import MLP_TLCLoss
+from .Confidence_calibration.In_training_methods.For_imbalance_data.MHML import MLP_MHML_2,MLP_MHML_4
+from .Confidence_calibration.In_training_methods.For_imbalance_data.BalPoE import MLP_BalPoE
+from .Confidence_calibration.In_training_methods.For_imbalance_data.MiSLAS import MLP_MiSLAS
+from .Confidence_calibration.In_training_methods.For_imbalance_data.LADE import MLP_LADE
+from .Confidence_calibration.In_training_methods.For_imbalance_data.MDCA import MLP_MDCA
+
 
 
 

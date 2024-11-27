@@ -27,7 +27,6 @@ class Pami_train_valid_test(Dataset):
                 x_list.append(x)
                 y_list.append(float(row[-1])) 
         
-        #这个地方还有点问题，不能这样直接划分，测试集需要是平衡的
         if mode=="train":
             self.data = x_list[:3*len(x_list)//5]
             self.labels = y_list[:3*len(x_list)//5]

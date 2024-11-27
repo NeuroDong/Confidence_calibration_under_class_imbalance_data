@@ -1,0 +1,36 @@
+DATASETS:
+  INPUTE_SIZE: (30,)
+  TEST: Creditcard_test
+  TRAIN: Creditcard_train
+  VALID: Creditcard_valid
+MODEL:
+  DEVICE: cuda:0
+  DROPOUT: False
+  JUST_EVAL: False
+  META_ARCHITECTURE: MLPClassifier
+  NUM_CLASS: 2
+  OUTPUT_DIR: output/Classification/Creditcard_SEED20/MLPClassifier/
+  PREWEIGHT:  
+  PRE_WEIGHT: False
+SEED: 20
+SOLVER:
+  BASE_LR: 0.1
+  BATCH_SIZE: 128
+  CLR_STEPS: 2000
+  GAMMA: 0.1
+  IS_PARALLEL: False
+  LR_SCHEDULER_NAME: Step_Decay
+  MAX_EPOCH: 20
+  MAX_ITER: 64000
+  MOMENTUM: 0.9
+  NESTEROV: False
+  NUM_WORKS: 8
+  OPTIMIZER: SGD
+  PIN_MEMORY: True
+  SHUFFLE: True
+  START_ITER: 0
+  STEPS: (32000, 48000)
+  WARMUP_FACTOR: 0.001
+  WARMUP_ITERS: 1000
+  WARMUP_METHOD: linear
+  WEIGHT_DECAY: 0.0001

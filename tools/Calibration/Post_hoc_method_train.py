@@ -1,6 +1,7 @@
 import torch
 import os
 import sys
+import inspect
 
 parentdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 sys.path.insert(0,parentdir) 
@@ -8,6 +9,7 @@ from customKing.utils.env import Set_seed
 from customKing.config.config import get_cfg
 from customKing.modeling.meta_arch.build import build_model, build_metric
 from customKing.data.datasets.Public_logits_data.unpickle_probs import unpickle_probs
+from customKing.data.datasets.Generate_logits_data.unpickle_generate_logits import unpickle_g_logits
 
 import logging
 from customKing.solver.build import build_optimizer,build_lr_scheduler
@@ -21,7 +23,7 @@ class doTrain():
         self.iteration = cfg.SOLVER.START_ITER
         self.cfg = cfg
 
-    def do_train(self,valid_set,test_set,model):
+    def do_train(self,train_set,valid_set,test_set,model):
         logging.basicConfig(level=logging.INFO)
         if model.require_iterative_training:
             model.train() 
@@ -29,7 +31,10 @@ class doTrain():
             scheduler = build_lr_scheduler(self.cfg.SOLVER, optimizer) 
             #---------Train------------#
             for epoch in range(self.cfg.SOLVER.MAX_EPOCH):
-                z_val, y_val = valid_set
+                if len(valid_set) == 2:
+                    z_val, y_val = valid_set
+                else:
+                    feature_val,z_val, y_val = valid_set
                 z_val,y_val = numpy_to_tensor(self.cfg,z_val,y_val)
                 loss_value= model(z_val,y_val)
                 optimizer.zero_grad()    
@@ -44,11 +49,25 @@ class doTrain():
                 
                 scheduler.step()
         else:
-            z_val, y_val = valid_set
-            z_val,y_val = numpy_to_tensor(self.cfg,z_val,y_val)
-            model.train()
-            model(z_val,y_val)
-
+            if len(valid_set) == 2:
+                z_val, y_val = valid_set
+                z_val,y_val = numpy_to_tensor(self.cfg,z_val,y_val)
+                model.train()
+                model(z_val,y_val)
+            elif len(valid_set) == 3:
+                feature_val,z_val, y_val = valid_set
+                feature_train,z_train,y_train = train_set
+                model.train()
+                signature = inspect.signature(model.forward)
+                names = []
+                for name, param in signature.parameters.items():
+                    names.append(name)
+                if len(names) == 5:
+                    model(z_val,y_val,feature_val,feature_train,y_train)
+                elif len(names) == 4:
+                    model(z_val,y_val,z_train,y_train)
+                elif len(names) == 2:
+                    model(z_val,y_val)
 
 def plot(self,OUTPUT_DIR, Dataset, n_bins=15, model = None):
     z_list, label_list = Dataset
@@ -65,7 +84,8 @@ def plot(self,OUTPUT_DIR, Dataset, n_bins=15, model = None):
 def numpy_to_tensor(cfg,z,y):
     z = torch.from_numpy(z)
     y = torch.from_numpy(y)
-    y = y.squeeze(dim=1)
+    if len(y.shape) == 2:
+        y = y.squeeze(dim=1)
     z = z.to(cfg.MODEL.DEVICE)
     y = y.to(cfg.MODEL.DEVICE).long()
     return z,y
@@ -73,37 +93,56 @@ def numpy_to_tensor(cfg,z,y):
 def logit_to_confidence(z,y):
     softmaxes = F.softmax(z, dim=1)
     confidences, predictions = torch.max(softmaxes, 1)
-    hits = predictions.eq(y)
     confidences,resort_index = torch.sort(confidences)
-    hits = hits[resort_index]
-    confidences = confidences.cpu().numpy()
-    hits = hits.cpu().numpy().astype(int)
-    return confidences,hits
+    labels = y[resort_index]
+    predictions = predictions[resort_index]
+    return confidences,predictions,labels
 
 def compute_metrics(cfg, Dataset, model=None, Final_record = False):
-        z_val, y_val = Dataset
-        z_val,y_val = numpy_to_tensor(cfg,z_val,y_val)
+        if len(Dataset) == 2:
+            z, y = Dataset
+        elif len(Dataset) == 3:
+            feature,z, y = Dataset
 
         if model is not None:
             model.eval()
-            cali_confidence,hits,is_softmaxed = model(z_val,y_val)
-            hits = hits.astype(int)
+            cali_confidence,predictions,labels = model(z,y)   # tensor
+            hits = predictions.eq(labels)
+            cali_confidence = cali_confidence.cpu().detach().numpy()
+            hits = hits.cpu().detach().numpy().astype(int)
+            labels = labels.cpu().detach().numpy().astype(int)
+
             model.train()
             metric_values = {}
             for metric in cfg.EVALUATE.METHOD_list:
                 metric_method = build_metric(cfg,metric)
-                assert metric_method.Need_top_confidence==True,"No logits!"
-                metric_value = metric_method(cali_confidence,hits)
+                signature = inspect.signature(metric_method.forward)
+                names = []
+                for name, param in signature.parameters.items():
+                    names.append(name)
+                if len(names)==2:
+                    metric_value = metric_method(cali_confidence, hits)
+                else:
+                    metric_value = metric_method(cali_confidence,hits,labels)
                 metric_values[metric] = metric_value
         else:
+            z,y = numpy_to_tensor(cfg,z,y)
+            confidence,predictions,labels = logit_to_confidence(z,y)
+            hits = predictions.eq(labels)
+            confidence = confidence.cpu().detach().numpy()
+            hits = hits.cpu().detach().numpy().astype(int)
+            labels = labels.cpu().detach().numpy().astype(int)
             metric_values = {}
             for metric in cfg.EVALUATE.METHOD_list:
                 metric_method = build_metric(cfg,metric)
-                if metric_method.Need_top_confidence:
-                    confidences, hits = logit_to_confidence(z_val, y_val)
-                    metric_value = metric_method(confidences, hits)
+                signature = inspect.signature(metric_method.forward)
+                names = []
+                for name, param in signature.parameters.items():
+                    names.append(name)
+                if len(names)==2:
+                    metric_value = metric_method(confidence, hits)
                 else:
-                    metric_value = metric_method(z_val,y_val)
+                    metric_value = metric_method(confidence,hits,labels)
                 metric_values[metric] = metric_value
 
         if Final_record:
@@ -125,15 +164,25 @@ def main():
     cfg = get_cfg(task_mode)
     if not os.path.exists(cfg.MODEL.OUTPUT_DIR):
         os.makedirs(cfg.MODEL.OUTPUT_DIR)
+    #save cfg
+    if os.path.exists(os.path.join(cfg.MODEL.OUTPUT_DIR,'cfg.yaml')):
+        os.remove(os.path.join(cfg.MODEL.OUTPUT_DIR,'cfg.yaml'))
+    with open(os.path.join(cfg.MODEL.OUTPUT_DIR,'cfg.yaml'), 'a+') as f:
+        print(cfg, file=f)
 
     #-----------Load Data------------------#
-    valid_set, test_set = unpickle_probs(cfg.DATASET.DATA_PATH, False)
+    _root = os.path.expanduser(os.getenv("CUSTOM_KING_DATASETS", "datasets"))
+    data_path = os.path.join(_root,cfg.DATASET.DATA_PATH)
+    if "public_logits_datasets" in data_path:
+        valid_set, test_set = unpickle_probs(data_path, False)
+    else:
+        train_set, valid_set, test_set = unpickle_g_logits(data_path,False)
 
     #-----------Load model-----------------#
     if cfg.MODEL.PRE_WEIGHT:
         model = torch.load(cfg.MODEL.PREWEIGHT)
     else:
-        model = build_model(cfg)
+        model = build_model(cfg,None,None)
     logging.info(f"Calibration method:{cfg.MODEL.META_ARCHITECTURE}")
     logging.info("Total number of paramerters in networks is {}  ".format(sum(x.numel() for x in model.parameters())))
     model.to(cfg.MODEL.DEVICE)
@@ -143,7 +192,7 @@ def main():
 
     if model.need_calibration_train == True:
         DoTrain = doTrain(cfg)
-        DoTrain.do_train(valid_set,test_set,model)
+        DoTrain.do_train(train_set,valid_set,test_set,model)
 
     #-----------Compute Metrics After Calibration-----------#
     compute_metrics(cfg,test_set,model=model,Final_record=True)

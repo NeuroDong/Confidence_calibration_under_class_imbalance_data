@@ -9,23 +9,25 @@ class credit_train_valid_test(Dataset):
     def __init__(self, root: str, mode: str) -> None:
         super().__init__()
         # 修改文件路径为 .data 文件路径
-        base_folder = r"statlog+german+credit+data/german.data"
+        base_folder = r"statlog+german+credit+data/german.data-numeric"
         data_file_path = os.path.join(root, base_folder)
         
         x_list = []
         y_list = []
-        
+
         # 读取 .data 文件并解析数据
         with open(data_file_path, 'r') as file:
-            for line in file:
+            lines = file.readlines()
+            for line in lines:
                 # 假设每行数据用空格分隔
                 values = line.strip().split()
                 x = [float(value) for value in values[:-1]]  # 特征数据
                 x_list.append(x)
-                y_list.append(float(values[-1]))  # 标签数据
+                y_list.append(float(values[-1])-1)  # 标签数据
         
         # 转换为 numpy 数组，方便后续处理
         x_list = np.array(x_list)
+        x_list = (x_list - x_list.min(axis=0)) / (x_list.max(axis=0) - x_list.min(axis=0))
         y_list = np.array(y_list)
         
         # 使用分层抽样进行训练集、验证集和测试集的划分
@@ -56,7 +58,11 @@ class credit_train_valid_test(Dataset):
 
     def __getitem__(self, idx):
         return self.data[idx], self.labels[idx]
-
+    
+    def get_cls_num_list(self):
+        pos_labels = self.labels[self.labels==1]
+        neg_labels = self.labels[self.labels==0]
+        return [len(neg_labels),len(pos_labels)]
 
 def load_Credit(name,root):
 

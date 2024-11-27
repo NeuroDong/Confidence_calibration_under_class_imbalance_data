@@ -39,6 +39,7 @@ from .Imbalance_data.Multi_classification.Cifar10_LT import register_Cifar10_LT
 from .Imbalance_data.Binary_classification.Pami import register_Pami
 from .Imbalance_data.Binary_classification.GermanCredit import register_Credit
 from .Imbalance_data.Binary_classification.Habermansurvival import register_Survival
+from .Imbalance_data.Binary_classification.CreditCard import register_Creditcard
 
 
 #----------------balance data----------------------#
@@ -133,6 +134,11 @@ def register_all_Survival(root):
     for name in names:
         register_Survival(name,root)
 
+def register_all_Creditcard(root):
+    names = ["Creditcard_train","Creditcard_valid","Creditcard_train_and_valid","Creditcard_test"]
+    for name in names:
+        register_Creditcard(name,root)
+
 if __name__.endswith(".builtin"):
     # Assume pre-defined datasets live in `./datasets`.
     _root = os.path.expanduser(os.getenv("CUSTOM_KING_DATASETS", "datasets"))
@@ -157,4 +163,5 @@ if __name__.endswith(".builtin"):
     register_all_Pami(_root)
     register_all_Credit(_root)
     register_all_Survival(_root)
+    register_all_Creditcard(_root)
     

@@ -18,6 +18,8 @@ class DualFocalLoss(nn.Module):
         super(DualFocalLoss, self).__init__()
         self.gamma = 5.0   #See Table 13 in the paper
         self.classifier = network
+        self.need_epoch = False
+        self.output_uncertainty = False
 
     def forward(self, input, target):
         logits = self.classifier._forward_impl(input)

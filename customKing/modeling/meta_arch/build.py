@@ -10,9 +10,10 @@ Registry for meta-architectures, i.e. the whole model.
 The registered object will be called with `obj(cfg)`
 and expected to return a `nn.Module` object.
 """
+import inspect
 
 
-def build_model(cfg):
+def build_model(cfg,cls_num_list_train,cls_num_list_test):
     """
     Build the whole model architecture, defined by ``cfg.MODEL.META_ARCHITECTURE``.
     Note that it does not load any weights from ``cfg``.
@@ -22,7 +23,17 @@ def build_model(cfg):
     # else:
     #     meta_arch = cfg.MODEL.META_ARCHITECTURE
     meta_arch = cfg.MODEL.META_ARCHITECTURE
-    model = META_ARCH_REGISTRY.get(meta_arch)(cfg)
+    model_object = META_ARCH_REGISTRY.get(meta_arch)
+    signature = inspect.signature(model_object)
+    names = []
+    for name, param in signature.parameters.items():
+        names.append(name)
+    if len(names) == 1:
+        model = model_object(cfg)
+    elif len(names) == 2:
+        model = model_object(cfg,cls_num_list_train)
+    elif len(names) == 3:
+        model = model_object(cfg,cls_num_list_train,cls_num_list_test)
     model.to(torch.device(cfg.MODEL.DEVICE))
     return model
 

@@ -21,8 +21,8 @@ _C.SEED = 20
 # ---------------------------------------------------------------------------- #
 task_mode = "In-Train Calibration"
 _C.MODEL = CN()
-_C.MODEL.META_ARCHITECTURE = "Wide_resnet34_2_DualFocalLoss"
-_C.MODEL.NUM_ClASSES = 2
+_C.MODEL.META_ARCHITECTURE = "MLP_MDCA"
+_C.MODEL.NUM_CLASS = 2  
 _C.MODEL.DEVICE = "cuda:0"
 _C.MODEL.JUST_EVAL = False
 _C.MODEL.PRE_WEIGHT = False
@@ -43,7 +43,7 @@ _C.SOLVER.WARMUP_FACTOR = 1.0 / 1000
 _C.SOLVER.WARMUP_ITERS = 1000
 _C.SOLVER.WARMUP_METHOD = "linear"
 _C.SOLVER.MAX_ITER = 64000
-_C.SOLVER.MAX_EPOCH = 500
+_C.SOLVER.MAX_EPOCH = 20
 _C.SOLVER.BATCH_SIZE = 128
 _C.SOLVER.NUM_WORKS = 20
 _C.SOLVER.BETA = (0.9, 0.999)   #default: (0.9, 0.999)
@@ -52,10 +52,11 @@ _C.SOLVER.NUM_WORKERS = 8    #the num workers of the Dataloader
 _C.SOLVER.IS_PARALLEL = False   #Whether to use multiple GPUs for training
 
 _C.DATASETS = CN()
-_C.DATASETS.TRAIN = "Survival_train"    #train dataset
-_C.DATASETS.VALID = "Survival_valid"    #valid dataset
-_C.DATASETS.TEST = "Survival_test"      #test dataset
+_C.DATASETS.TRAIN = "Creditcard_train"    #train dataset
+_C.DATASETS.VALID = "Creditcard_valid"    #valid dataset
+_C.DATASETS.TEST = "Creditcard_test"      #test dataset
+_C.DATASETS.INPUTE_SIZE = (30,)
 
 _C.EVALUATE = CN()
-_C.EVALUATE.METHOD_list = ["ECE_with_equal_mass", "Debaised_ECE", "ECE_sweep_em", "KS_error", "SmoothingECE"]  #"TCE_BPM"
+_C.EVALUATE.METHOD_list = ["ECE_with_equal_mass", "ICE_smooth","ICE_soft","ICE_strong","CECE","MSECE","WSECE","RBECE"]  #"TCE_BPM"
 _C.MODEL.OUTPUT_DIR = "output/"+task_mode+"/"+_C.DATASETS.TRAIN.split("_")[0] + "/" + _C.MODEL.META_ARCHITECTURE + "/"
