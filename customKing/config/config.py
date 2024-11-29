@@ -75,14 +75,10 @@ def get_cfg(task_mode) -> CfgNode:
     Returns:
         a detectron2 CfgNode instance.
     """
-    if task_mode == "DataLevel Calibration":
-        from .DataLevel_Calibration_defaults import _C
-    elif task_mode == "Post_Calibration":
-        from .Post_Calibration_defaults import _C
-    elif task_mode == "In-Train Calibration":
-        from .InTrain_Calibration_defaults import _C
-    elif task_mode == "Classification":
+    if task_mode == "Classification":
         from .Classification_defaults import _C
+    elif task_mode == "Main":
+        from .Main_defaults import _C
     return _C.clone()
 
 def configurable(init_func=None, *, from_config=None):

@@ -311,6 +311,21 @@ class ResNet(nn.Module):
             return predict,loss
         else:
             return predict
+        
+    def forward_backbone(self, x: Tensor) -> Tensor:
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x) 
+        x = self.layer2(x) 
+        x = self.layer3(x) 
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        return x
 
 def _resnet(
     arch: str,
@@ -531,59 +546,59 @@ def wide_resnet101_2(pretrained: bool = False, progress: bool = True, **kwargs: 
 
 @META_ARCH_REGISTRY.register()
 def Resnet20(cfg,**kwargs: Any):
-    return resnet20(num_classes=cfg.MODEL.NUM_ClASSES, **kwargs)
+    return resnet20(num_classes=cfg.MODEL.NUM_CLASS, **kwargs)
 
 @META_ARCH_REGISTRY.register()
 def Resnet110(cfg):
-    return resnet110(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet110(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Resnet18(cfg):
-    return resnet18(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet18(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Resnet34(cfg):
-    return resnet34(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet34(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Resnet50(cfg):
-    return resnet50(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet50(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Resnet101(cfg):
-    return resnet101(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet101(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Resnet152(cfg):
-    return resnet152(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnet152(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def ResNeXt29_8x64d(cfg):
-    return resnext29_8x64d(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnext29_8x64d(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def ResNeXt29_16x64d(cfg):
-    return resnext29_16x64d(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnext29_16x64d(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def ResNeXt50(cfg):
-    return resnext50_32x4d(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnext50_32x4d(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def ResNeXt101(cfg):
-    return resnext101_32x8d(num_classes=cfg.MODEL.NUM_ClASSES)
+    return resnext101_32x8d(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Wide_resnet34_2(cfg):
-    return wide_resnet34_2(num_classes=cfg.MODEL.NUM_ClASSES)
+    return wide_resnet34_2(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Wide_resnet50_2(cfg):
-    return wide_resnet50_2(num_classes=cfg.MODEL.NUM_ClASSES)
+    return wide_resnet50_2(num_classes=cfg.MODEL.NUM_CLASS)
 
 @META_ARCH_REGISTRY.register()
 def Wide_resnet101_2(cfg):
-    return wide_resnet101_2(num_classes=cfg.MODEL.NUM_ClASSES)
+    return wide_resnet101_2(num_classes=cfg.MODEL.NUM_CLASS)
 
 
 

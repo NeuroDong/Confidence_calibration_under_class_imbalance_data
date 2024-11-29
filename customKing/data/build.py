@@ -45,7 +45,7 @@ def build_loader(cfg,dataset):
     return DataLoader(dataset,batch_size=cfg.SOLVER.BATCH_SIZE,shuffle=cfg.SOLVER.SHUFFLE,num_workers=cfg.SOLVER.NUM_WORKS,drop_last=False)
 
 def build_sampling_loader(cfg,dataset):
-    if cfg.DATASETS.SAMPLER == "undersampler":
+    if cfg.DATASET.SAMPLER == "undersampler":
         labels = [dataset[idx][1] for idx in range(len(dataset))]
         Sampler = UnderSampler(labels)
         cfg.SOLVER.SHUFFLE = False

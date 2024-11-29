@@ -1,5 +1,5 @@
 '''
-
+Not yet finished
 '''
 
 import os
@@ -9,14 +9,346 @@ import matplotlib.pyplot as plt
 
 import logging
 from mmcv.runner import auto_fp16, force_fp32, load_checkpoint
-from openmixup.utils import print_log
-from .. import builder
-from ..registry import MODELS
-from ..augments import cutmix, mixup
-from ..utils import PlotTensor
 from torch import distributed as dist
 import torch.nn as nn
+import torchvision
+import cv2
 
+class PlotTensor:
+    """Plot torch tensor as matplotlib figure.
+
+    Args:
+        apply_inv (bool): Whether to apply inverse normalization.
+    """
+
+    def __init__(self, apply_inv=True) -> None:
+        trans_cifar = [
+            torchvision.transforms.Normalize(
+                mean=[ 0., 0., 0. ], std=[1 / 0.2023, 1 / 0.1994, 1 / 0.201]),
+            torchvision.transforms.Normalize(
+                mean=[-0.4914, -0.4822, -0.4465], std=[ 1., 1., 1. ])]
+        trans_in = [
+            torchvision.transforms.Normalize(
+                mean=[ 0., 0., 0. ], std=[1 / 0.229, 1 / 0.224, 1 / 0.225]),
+            torchvision.transforms.Normalize(
+                mean=[-0.485, -0.456, -0.406], std=[ 1., 1., 1. ])]
+        if apply_inv:
+            self.invTrans_cifar = torchvision.transforms.Compose(trans_cifar)
+            self.invTrans_in = torchvision.transforms.Compose(trans_in)
+
+    def plot(self,
+             img, nrow=4, title_name=None, save_name=None,
+             make_grid=True, dpi=None, cmap='gray', apply_inv=True, overwrite=False):
+        assert save_name is not None
+
+        if make_grid:
+            # make grid and save as plt images
+            assert img.size(0) % nrow == 0
+            ncol = img.size(0) // nrow
+            if ncol > nrow:
+                ncol = nrow
+                nrow = img.size(0) // ncol
+            img_grid = torchvision.utils.make_grid(img, nrow=nrow, pad_value=0)
+
+            if img.size(1) == 1:
+                cmap = getattr(plt.cm, cmap, plt.cm.jet)
+            else:
+                cmap = None
+            if apply_inv:
+                if img.size(2) <= 64:
+                    img_grid = self.invTrans_cifar(img_grid)
+                else:
+                    img_grid = self.invTrans_in(img_grid)
+            img_grid = torch.clip(img_grid * 255, 0, 255).int()
+            img_grid = np.transpose(img_grid.detach().cpu().numpy(), (1, 2, 0))
+            
+            fig = plt.figure(figsize=(nrow * 2, ncol * 2))
+            plt.imshow(img_grid, cmap=cmap)
+            if title_name is not None:
+                plt.title(title_name)
+            if not os.path.exists(save_name) or overwrite:
+                plt.savefig(save_name, dpi=dpi)
+            plt.close()
+        else:
+            # save each image sperately
+            save_name = save_name.split('.')  # split into a name and a suffix
+            if apply_inv:
+                if img.size(2) <= 64:
+                    img = self.invTrans_cifar(img)
+                else:
+                    img = self.invTrans_in(img)
+            img = torch.clip(img * 255, 0, 255).detach().cpu().numpy()
+            img = np.transpose(img, (0, 2, 3, 1))
+            title_name = '' if title_name is None else title_name.replace(' ', '')
+
+            for i in range(img.shape[0]):
+                img_ = img[i, ...]
+                # cam_image is RGB encoded whereas "cv2.imwrite" requires BGR encoding.
+                img_ = cv2.cvtColor(img_, cv2.COLOR_RGB2BGR)
+                cv2.imwrite("{}_{}.{}".format(save_name[0], title_name+str(i), save_name[1]), img_)
+
+@torch.no_grad()
+def concat_all_gather(tensor):
+    """Performs all_gather operation on the provided tensors.
+
+        *** Warning: torch.distributed.all_gather has no gradient. ***
+    """
+    tensors_gather = [
+        torch.ones_like(tensor)
+        for _ in range(torch.distributed.get_world_size())
+    ]
+    torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
+
+    output = torch.cat(tensors_gather, dim=0)
+    return output
+
+@torch.no_grad()
+def batch_shuffle_ddp(x, idx_shuffle=None, no_repeat=False):
+    """Batch shuffle (no grad), for making use of BatchNorm.
+        *** Only support DistributedDataParallel (DDP) model. ***
+        return: x, idx_shuffle, idx_unshuffle.
+        *** no repeat (09.23 update) ***
+    
+    Args:
+        idx_shuffle: Given shuffle index if not None.
+        no_repeat: The idx_shuffle does not have any repeat index as
+            the original indice [i for i in range(N)]. It's used in
+            mixup methods (self-supervisedion).
+    """
+    # gather from all gpus
+    batch_size_this = x.shape[0]
+    x_gather = concat_all_gather(x)
+    batch_size_all = x_gather.shape[0]
+
+    num_gpus = batch_size_all // batch_size_this
+
+    # random shuffle index
+    if idx_shuffle is None:
+        # generate shuffle idx
+        idx_shuffle = torch.randperm(batch_size_all).cuda()
+        # each idx should not be the same as the original
+        if bool(no_repeat) == True:
+            idx_original = torch.tensor([i for i in range(batch_size_all)]).cuda()
+            idx_repeat = False
+            for i in range(20):  # try 20 times
+                if (idx_original == idx_shuffle).any() == True:  # find repeat
+                    idx_repeat = True
+                    idx_shuffle = torch.randperm(batch_size_all).cuda()
+                else:
+                    idx_repeat = False
+                    break
+            # repeat hit: prob < 1.8e-4
+            if idx_repeat == True:
+                fail_to_shuffle = True
+                idx_shuffle = idx_original.clone()
+                for i in range(3):
+                    # way 1: repeat prob < 1.5e-5
+                    rand_ = torch.randperm(batch_size_all).cuda()
+                    idx_parition = rand_ > torch.median(rand_)
+                    idx_part_0 = idx_original[idx_parition == True]
+                    idx_part_1 = idx_original[idx_parition != True]
+                    if idx_part_0.shape[0] == idx_part_1.shape[0]:
+                        idx_shuffle[idx_parition == True] = idx_part_1
+                        idx_shuffle[idx_parition != True] = idx_part_0
+                        if (idx_original == idx_shuffle).any() != True:  # no repeat
+                            fail_to_shuffle = False
+                            break
+                # fail prob -> 0
+                if fail_to_shuffle == True:
+                    # way 2: repeat prob = 0, but too simple!
+                    idx_shift = np.random.randint(1, batch_size_all-1)
+                    idx_shuffle = torch.tensor(  # shift the original idx
+                        [(i+idx_shift) % batch_size_all for i in range(batch_size_all)]).cuda()
+    else:
+        assert idx_shuffle.size(0) == batch_size_all, \
+            "idx_shuffle={}, batchsize={}".format(idx_shuffle.size(0), batch_size_all)
+
+    # broadcast to all gpus
+    torch.distributed.broadcast(idx_shuffle, src=0)
+
+    # index for restoring
+    idx_unshuffle = torch.argsort(idx_shuffle)
+
+    # shuffled index for this gpu
+    gpu_idx = torch.distributed.get_rank()
+    idx_this = idx_shuffle.view(num_gpus, -1)[gpu_idx]
+
+    return x_gather[idx_this], idx_shuffle, idx_unshuffle
+
+@torch.no_grad()
+def cutmix(img,
+           gt_label,
+           alpha=1.0,
+           lam=None,
+           dist_mode=False,
+           return_mask=False,
+           **kwargs):
+    r""" CutMix augmentation.
+
+    "CutMix: Regularization Strategy to Train Strong Classifiers with
+    Localizable Features (https://arxiv.org/abs/1905.04899)". In ICCV, 2019.
+        https://github.com/clovaai/CutMix-PyTorch
+    
+    Args:
+        img (Tensor): Input images of shape (N, C, H, W).
+            Typically these should be mean centered and std scaled.
+        gt_label (Tensor): Ground-truth labels (one-hot).
+        alpha (float): To sample Beta distribution.
+        lam (float): The given mixing ratio. If lam is None, sample a lam
+            from Beta distribution.
+        dist_mode (bool): Whether to do cross gpus index shuffling and
+            return the mixup shuffle index, which support supervised
+            and self-supervised methods.
+        return_mask (bool): Whether to return the cutting-based mask of
+            shape (N, 1, H, W). Defaults to False.
+    """
+
+    def rand_bbox(size, lam, return_mask=False):
+        """ generate random box by lam """
+        W = size[2]
+        H = size[3]
+        cut_rat = np.sqrt(1. - lam)
+        cut_w = int(W * cut_rat)
+        cut_h = int(H * cut_rat)
+
+        # uniform
+        cx = np.random.randint(W)
+        cy = np.random.randint(H)
+
+        bbx1 = np.clip(cx - cut_w // 2, 0, W)
+        bby1 = np.clip(cy - cut_h // 2, 0, H)
+        bbx2 = np.clip(cx + cut_w // 2, 0, W)
+        bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+        if not return_mask:
+            return bbx1, bby1, bbx2, bby2
+        else:
+            mask = torch.zeros((1, 1, W, H)).cuda()
+            mask[:, :, bbx1:bbx2, bby1:bby2] = 1
+            mask = mask.expand(size[0], 1, W, H)  # (N, 1, H, W)
+            return bbx1, bby1, bbx2, bby2, mask
+
+    if lam is None:
+        lam = np.random.beta(alpha, alpha)
+
+    # normal mixup process
+    if not dist_mode:
+        rand_index = torch.randperm(img.size(0)).cuda()
+        if len(img.size()) == 4:  # [N, C, H, W]
+            img_ = img[rand_index]
+        else:
+            assert img.dim() == 5  # semi-supervised img [N, 2, C, H, W]
+            # * notice that the rank of two groups of img is fixed
+            img_ = img[:, 1, ...].contiguous()
+            img = img[:, 0, ...].contiguous()
+        _, _, h, w = img.size()
+        y_a = gt_label
+        y_b = gt_label[rand_index]
+
+        if not return_mask:
+            bbx1, bby1, bbx2, bby2 = rand_bbox(img.size(), lam)
+        else:
+            bbx1, bby1, bbx2, bby2, mask = rand_bbox(img.size(), lam, True)
+        img[:, :, bbx1:bbx2, bby1:bby2] = img_[:, :, bbx1:bbx2, bby1:bby2]
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (w * h))
+        if return_mask:
+            img = (img, mask)
+
+        return img, (y_a, y_b, lam)
+
+    # dist mixup with cross gpus shuffle
+    else:
+        if len(img.size()) == 5:  # self-supervised img [N, 2, C, H, W]
+            img_ = img[:, 1, ...].contiguous()
+            img = img[:, 0, ...].contiguous()
+            img_, idx_shuffle, idx_unshuffle = batch_shuffle_ddp(  # N
+                img_, idx_shuffle=kwargs.get("idx_shuffle_mix", None), no_repeat=True)
+        else:
+            assert len(img.size()) == 4  # normal img [N, C, H, w]
+            img_, idx_shuffle, idx_unshuffle = batch_shuffle_ddp(  # N
+                img, idx_shuffle=kwargs.get("idx_shuffle_mix", None), no_repeat=True)
+        _, _, h, w = img.size()
+
+        if not return_mask:
+            bbx1, bby1, bbx2, bby2 = rand_bbox(img.size(), lam)
+        else:
+            bbx1, bby1, bbx2, bby2, mask = rand_bbox(img.size(), lam, True)
+        img[:, :, bbx1:bbx2, bby1:bby2] = img_[:, :, bbx1:bbx2, bby1:bby2]
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (w * h))
+        if return_mask:
+            img = (img, mask)
+
+        if gt_label is not None:
+            y_a = gt_label
+            y_b, _, _ = batch_shuffle_ddp(
+                gt_label, idx_shuffle=idx_shuffle, no_repeat=True)
+            return img, (y_a, y_b, lam)
+        else:
+            return img, (idx_shuffle, idx_unshuffle, lam)
+
+@torch.no_grad()
+def mixup(img,
+          gt_label,
+          alpha=1.0,
+          lam=None,
+          dist_mode=False,
+          **kwargs):
+    r""" MixUp augmentation.
+
+    "Mixup: Beyond Empirical Risk Minimization (https://arxiv.org/abs/1710.09412)".
+    In ICLR, 2018.
+        https://github.com/facebookresearch/mixup-cifar10
+    
+    Args:
+        img (Tensor): Input images of shape (N, C, H, W).
+            Typically these should be mean centered and std scaled.
+        gt_label (Tensor): Ground-truth labels (one-hot).
+        alpha (float): To sample Beta distribution.
+        lam (float): The given mixing ratio. If lam is None, sample a lam
+            from Beta distribution.
+        dist_mode (bool): Whether to do cross gpus index shuffling and
+            return the mixup shuffle index, which support supervised
+            and self-supervised methods.
+    """
+    if lam is None:
+        lam = np.random.beta(alpha, alpha)
+
+    # normal mixup process
+    if not dist_mode:
+        rand_index = torch.randperm(img.size(0)).cuda()
+        if len(img.size()) == 4:  # [N, C, H, W]
+            img_ = img[rand_index]
+        else:
+            assert img.dim() == 5  # semi-supervised img [N, 2, C, H, W]
+            # * notice that the rank of two groups of img is fixed
+            img_ = img[:, 1, ...].contiguous()
+            img = img[:, 0, ...].contiguous()
+
+        y_a = gt_label
+        y_b = gt_label[rand_index]
+        img = lam * img + (1 - lam) * img_
+        return img, (y_a, y_b, lam)
+    
+    # dist mixup with cross gpus shuffle
+    else:
+        if len(img.size()) == 5:  # self-supervised img [N, 2, C, H, W]
+            img_ = img[:, 1, ...].contiguous()
+            img = img[:, 0, ...].contiguous()
+            img_, idx_shuffle, idx_unshuffle = batch_shuffle_ddp(  # N
+                img_, idx_shuffle=kwargs.get("idx_shuffle_mix", None), no_repeat=True)
+        else:
+            assert len(img.size()) == 4  # normal img [N, C, H, w]
+            img_, idx_shuffle, idx_unshuffle = batch_shuffle_ddp(  # N
+                img, idx_shuffle=kwargs.get("idx_shuffle_mix", None), no_repeat=True)
+        img = lam * img + (1 - lam) * img_
+        
+        if gt_label is not None:
+            y_a = gt_label
+            y_b, _, _ = batch_shuffle_ddp(
+                gt_label, idx_shuffle=idx_shuffle, no_repeat=True)
+            return img, (y_a, y_b, lam)
+        else:
+            return img, (idx_shuffle, idx_unshuffle, lam)
 
 def get_dist_info():
     if dist.is_available() and dist.is_initialized():
@@ -88,7 +420,7 @@ def print_log(msg, logger=None, level=logging.INFO):
             'logger should be either a logging.Logger object, "root", '
             '"silent" or None, but got {}'.format(logger))
 
-@MODELS.register_module
+
 class AutoMixup(nn.Module):
     """ AutoMix and SAMix
 

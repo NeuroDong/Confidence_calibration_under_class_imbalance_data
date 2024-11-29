@@ -126,9 +126,9 @@ class Cifar10_train_valid_test(Dataset):
         self.label = label[self.mode]
 
         imb_type="exp"
-        imb_factor = 0.01
-        img_num_list = self.get_img_num_per_cls(self.cls_num, imb_type, imb_factor)
-        self.gen_imbalanced_data(img_num_list)
+        imb_factor = 0.02
+        self.img_num_list = self.get_img_num_per_cls(self.cls_num, imb_type, imb_factor)
+        self.gen_imbalanced_data(self.img_num_list)
 
     def _load_meta(self) -> None:
         path = os.path.join(self.root, self.base_folder, self.meta['filename'])
@@ -170,20 +170,21 @@ class Cifar10_train_valid_test(Dataset):
         return len(self.data)
     
     def get_img_num_per_cls(self, cls_num, imb_type, imb_factor):
-        img_max = len(self.data) / cls_num
-        img_num_per_cls = []
-        if imb_type == 'exp':
-            for cls_idx in range(cls_num):
-                num = img_max * (imb_factor**(cls_idx / (cls_num - 1.0)))
-                img_num_per_cls.append(int(num))
-        elif imb_type == 'step':
-            for cls_idx in range(cls_num // 2):
-                img_num_per_cls.append(int(img_max))
-            for cls_idx in range(cls_num // 2):
-                img_num_per_cls.append(int(img_max * imb_factor))
-        else:
-            img_num_per_cls.extend([int(img_max)] * cls_num)
-        return img_num_per_cls
+        if self.mode != "test":
+            img_max = len(self.data) / cls_num
+            img_num_per_cls = []
+            if imb_type == 'exp':
+                for cls_idx in range(cls_num):
+                    num = img_max * (imb_factor**(cls_idx / (cls_num - 1.0)))
+                    img_num_per_cls.append(int(num))
+            elif imb_type == 'step':
+                for cls_idx in range(cls_num // 2):
+                    img_num_per_cls.append(int(img_max))
+                for cls_idx in range(cls_num // 2):
+                    img_num_per_cls.append(int(img_max * imb_factor))
+            else:
+                img_num_per_cls.extend([int(img_max)] * cls_num)
+            return img_num_per_cls
     
     def gen_imbalanced_data(self, img_num_per_cls):
         new_data = []
@@ -202,6 +203,9 @@ class Cifar10_train_valid_test(Dataset):
         new_data = np.vstack(new_data)
         self.data = new_data
         self.label = new_targets
+
+    def get_cls_num_list(self):
+        return self.img_num_list
 
 def load_Cifar10_LT(name,root):
     transform_train = transforms.Compose([
@@ -244,6 +248,8 @@ def load_Cifar10_LT(name,root):
         dataset = torchdata.ConcatDataset([dataset_train,dataset_valid])
 
     return dataset
+
+
 
 def register_Cifar10_LT(name,root):
     DatasetCatalog.register(name, lambda: load_Cifar10_LT(name,root))

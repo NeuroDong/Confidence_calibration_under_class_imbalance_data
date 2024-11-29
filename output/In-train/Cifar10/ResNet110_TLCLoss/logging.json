@@ -1,0 +1,10 @@
+{"Epoch": 0, "Iteration": 20, "train_acc": 0.3671875, "loss_value": 17.36529541015625, "lr": 0.1}
+{"Epoch": 0, "Iteration": 40, "train_acc": 0.3984375, "loss_value": 17.32118034362793, "lr": 0.1}
+{"Epoch": 0, "Iteration": 60, "train_acc": 0.546875, "loss_value": 16.251482009887695, "lr": 0.1}
+{"Epoch": 0, "Iteration": 80, "train_acc": 0.5, "loss_value": 16.627586364746094, "lr": 0.1}
+{"testAcc": 0.16359999775886536}
+{"Epoch": 1, "Iteration": 100, "train_acc": 0.5546875, "loss_value": 16.02476692199707, "lr": 0.1}
+{"Epoch": 1, "Iteration": 120, "train_acc": 0.5546875, "loss_value": 16.56892967224121, "lr": 0.1}
+{"Epoch": 1, "Iteration": 140, "train_acc": 0.5390625, "loss_value": 15.830469131469727, "lr": 0.1}
+{"Epoch": 1, "Iteration": 160, "train_acc": 0.4921875, "loss_value": 17.232437133789062, "lr": 0.1}
+{"Epoch": 1, "Iteration": 180, "train_acc": 0.625, "loss_value": 16.34229278564453, "lr": 0.1}

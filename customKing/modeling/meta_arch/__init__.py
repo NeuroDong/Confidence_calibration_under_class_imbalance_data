@@ -48,7 +48,7 @@ from .Calibration_metrics.Imbalance_metrics.Class_wise_ECE import CECE,MSECE,WSE
 from .Calibration_metrics.Imbalance_metrics.RBECE import RBECE
 # Data level calibration method
 from .Confidence_calibration.Data_level_methods.For_imbalance_data.AUB_platt import AUB_Platt
-from .Confidence_calibration.Data_level_methods.For_imbalance_data.UniMix import unimix,Bayias_compensated_loss
+from .Confidence_calibration.Data_level_methods.For_imbalance_data.UniMix import ResNet110_UniMix_BeyianLoss
 
 #post-hoc
 from .Confidence_calibration.Post_hoc_methods.For_imbalance_data.TKHT import TKHT_2Head
@@ -57,7 +57,7 @@ from .Confidence_calibration.Post_hoc_methods.For_imbalance_data import RCIR
 from .Confidence_calibration.Post_hoc_methods.For_imbalance_data import I_Max_sCW
 
 #In-train
-from .Confidence_calibration.In_training_methods.For_imbalance_data.TLC import MLP_TLCLoss
+from .Confidence_calibration.In_training_methods.For_imbalance_data.TLC import MLP_TLCLoss,ResNet110_TLCLoss
 from .Confidence_calibration.In_training_methods.For_imbalance_data.MHML import MLP_MHML_2,MLP_MHML_4
 from .Confidence_calibration.In_training_methods.For_imbalance_data.BalPoE import MLP_BalPoE
 from .Confidence_calibration.In_training_methods.For_imbalance_data.MiSLAS import MLP_MiSLAS

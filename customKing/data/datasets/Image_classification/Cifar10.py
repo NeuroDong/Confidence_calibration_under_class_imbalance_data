@@ -164,6 +164,12 @@ class Cifar10_train_valid_test(Dataset):
     def __len__(self) -> int:
         return len(self.data)
 
+    def get_cls_num_list(self):
+        img_num_list = []
+        for i in range(10):
+            img_num_list.append(sum(self.label == i))
+        return img_num_list
+
 def load_Cifar10(name,root):
     transform_train = transforms.Compose([
             transforms.ToTensor(),

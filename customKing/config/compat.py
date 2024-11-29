@@ -25,7 +25,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from .config import CfgNode as CN
-from .DataLevel_Calibration_defaults import _C
+from .Main_defaults import _C
 
 __all__ = ["upgrade_config", "downgrade_config"]
 
